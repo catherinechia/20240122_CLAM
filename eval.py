@@ -41,7 +41,7 @@ parser.add_argument('--fold', type=int, default=-1, help='single fold to evaluat
 parser.add_argument('--micro_average', action='store_true', default=False, 
                     help='use micro_average instead of macro_avearge for multiclass AUC')
 parser.add_argument('--split', type=str, choices=['train', 'val', 'test', 'all'], default='test')
-parser.add_argument('--task', type=str, choices=['task_1_tumor_vs_normal',  'task_2_tumor_subtyping'])
+parser.add_argument('--task', type=str, choices=['cscc_vs_noncscc', 'task_1_tumor_vs_normal',  'task_2_tumor_subtyping'])
 args = parser.parse_args()
 
 device=torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -77,6 +77,16 @@ if args.task == 'task_1_tumor_vs_normal':
                             shuffle = False, 
                             print_info = True,
                             label_dict = {'normal_tissue':0, 'tumor_tissue':1},
+                            patient_strat=False,
+                            ignore=[])
+
+elif args.task == 'cscc_vs_noncscc':
+    args.n_classes=2
+    dataset = Generic_MIL_Dataset(csv_path = '/data/pathology/users/catherine/20231217_EP1_preproc/output/_clam/prototype_mask_bwh/dataset_labels.csv',
+                            data_dir= os.path.join(args.data_root_dir, 'features/pt_files'),
+                            shuffle = False, 
+                            print_info = True,
+                            label_dict = {'non-cscc':0, 'cscc':1},
                             patient_strat=False,
                             ignore=[])
 
