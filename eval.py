@@ -83,7 +83,7 @@ if args.task == 'task_1_tumor_vs_normal':
 elif args.task == 'cscc_vs_noncscc':
     args.n_classes=2
     dataset = Generic_MIL_Dataset(csv_path = '/data/pathology/users/catherine/20231217_EP1_preproc/output/_clam/prototype_mask_bwh/dataset_labels.csv',
-                            data_dir= os.path.join(args.data_root_dir, 'features/pt_files'),
+                            data_dir= os.path.join(args.data_root_dir, 'features'),
                             shuffle = False, 
                             print_info = True,
                             label_dict = {'non-cscc':0, 'cscc':1},
