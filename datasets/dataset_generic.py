@@ -337,6 +337,9 @@ class Generic_MIL_Dataset(Generic_WSI_Classification_Dataset):
 		if not self.use_h5:
 			if self.data_dir:
 				full_path = os.path.join(data_dir, 'pt_files', '{}.pt'.format(slide_id))
+				print("Added this line to solve a bug that I don't understand")
+				print(full_path)
+				#Error: FileNotFoundError: [Errno 2] No such file or directory: '/data/pathology/users/catherine/20231217_EP1_preproc/output/_clam/prototype_mask_bwh/features/pt_files/pt_files/DD_S04_P000087_C0001_B201_T01_V01_L01_A15.pt'
 				features = torch.load(full_path)
 				return features, label
 			
