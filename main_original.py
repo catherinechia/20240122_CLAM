@@ -20,8 +20,6 @@ import torch.nn.functional as F
 import pandas as pd
 import numpy as np
 
-from sklearn.metrics import f1_score #Added to calculate F1-score
-
 
 def main(args):
     # create results directory if necessary
@@ -41,7 +39,6 @@ def main(args):
     all_val_auc = []
     all_test_acc = []
     all_val_acc = []
-    all_test_f1 = [] #Added to calculate F1-score
     folds = np.arange(start, end)
     for i in folds:
         seed_torch(args.seed)
@@ -50,33 +47,16 @@ def main(args):
         
         datasets = (train_dataset, val_dataset, test_dataset)
         results, test_auc, val_auc, test_acc, val_acc  = train(datasets, i, args)
-        #Added to calculate F1-score
-        #Y_pred_class = pd.DataFrame.from_dict(results, orient='index')["label"]
-        df_test_pred_class = pd.DataFrame.from_dict(results, orient='index')
-        l_columns = df_test_pred_class.columns.tolist()
-        df_test_pred_class = df_test_pred_class[["slide_id", "label"]]
-
-        #df_hat_class
-        df_test_hat_class = pd.DataFrame()
-        df_test_hat_class["slide_id"] = test_dataset.slide_data.slide_id.values.tolist()
-        df_test_hat_class["label"] = test_dataset.slide_data.label.values.tolist()
-
-        #Sort df_pred_class and df_test_hat_class so that the slide_id columns are in the same order in both dataframes
-        df_test_pred_class = df_test_pred_class.set_index('slide_id')
-        df_test_pred_class = df_test_pred_class.reindex(index=df_test_hat_class['slide_id'])
-        df_test_pred_class = df_test_pred_class.reset_index()
-
         all_test_auc.append(test_auc)
         all_val_auc.append(val_auc)
         all_test_acc.append(test_acc)
         all_val_acc.append(val_acc)
-        all_test_f1.append(f1_score(df_test_pred_class["label"].tolist(), df_test_hat_class["label"].tolist(), zero_division="warn"))
         #write results to pkl
         filename = os.path.join(args.results_dir, 'split_{}_results.pkl'.format(i))
         save_pkl(filename, results)
-    #Add F1-score
+
     final_df = pd.DataFrame({'folds': folds, 'test_auc': all_test_auc, 
-        'val_auc': all_val_auc, 'test_acc': all_test_acc, 'val_acc' : all_val_acc, 'test_f1' : all_test_f1})
+        'val_auc': all_val_auc, 'test_acc': all_test_acc, 'val_acc' : all_val_acc})
 
     if len(folds) != args.k:
         save_name = 'summary_partial_{}_{}.csv'.format(start, end)
