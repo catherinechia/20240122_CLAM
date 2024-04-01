@@ -31,6 +31,10 @@ def drawHeatmap(scores, coords, slide_path=None, wsi_object=None, vis_level = -1
     wsi = wsi_object.getOpenSlide()
     if vis_level < 0:
         vis_level = wsi.get_best_level_for_downsample(32)
+        #vis_level = wsi.get_best_level_for_downsample(64)
+        #vis_level = wsi.get_best_level_for_downsample(128)
+        #vis_level = 2
+
     
     heatmap = wsi_object.visHeatmap(scores=scores, coords=coords, vis_level=vis_level, **kwargs)
     return heatmap

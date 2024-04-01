@@ -1,0 +1,70 @@
+https://github.com/mahmoodlab/CLAM/issues/22
+import h5py
+with h5py.File(PATH_TO_FILE,'r') as hdf5_file:
+	img = hdf5_file['imgs'][:]
+	coord = hdf5_file['coords'][:]
+        print(img.shape)
+        print(coord.shape)
+
+Hi Sam, so whichever way you think is easier for you, but basically, in my pipeline, I generate one .h5 file per slide, where it contains two fields:
+
+'img' - which is the array of tiles extracted from that slide (shape N x h x w x c)
+'coords' - which is the array of x,y coordinates corresponding the tiles (shape N x 2)
+N is the number of tiles in the slide, h x w are tile dimensions, and c being number of channels (e.g. 3 for RGB).
+If you can convert your jpg tiles into one .h5 file per slide, then you would be able to use "extract_features.py" in the code base to perform feature extraction, and all subsequent steps for training and evaluation.
+To verify that your .h5 files are prepared correctly, you should be able to load the .h5 and verify that the printed shape for the coordinates and tiles are correct, for example:
+
+###############################################################################################
+https://github.com/mahmoodlab/CLAM/issues/232
+class WSI_Classification_Dataset(Dataset):
+    def __init__(self, 
+                 df, 
+                 data_source, 
+                 target_transform = None,
+                 index_col = 'slide_id',
+                 target_col = 'label', 
+                 use_h5 = True,
+                 label_map = None):
+        """
+        Args:
+        """
+        self.label_map = label_map
+        self.data_source = data_source
+        self.index_col = index_col
+        self.target_col = target_col
+        self.target_transform = target_transform
+        self.data = df
+        self.use_h5 = use_h5
+
+    def __len__(self):
+        return len(self.data)
+
+    def get_ids(self, ids):
+        return self.data.loc[ids, self.index_col]
+
+    def get_labels(self, ids):
+        return self.data.loc[ids, self.target_col]
+
+    def __getitem__(self, idx):
+        
+        slide_id = self.get_ids(idx)
+        label = self.get_labels(idx)
+
+        if self.label_map is not None:
+            label = self.label_map[label]
+        if self.target_transform is not None:
+            label = self.target_transform(label)
+
+        if self.use_h5:
+            feat_path = os.path.join(self.data_source, 'h5_files', slide_id + '.h5')
+            with h5py.File(feat_path, 'r') as f:
+                features = torch.from_numpy(f['features'][:])
+                coords = torch.from_numpy(f['coords'][:])
+        else:
+            feat_path = os.path.join(self.data_source, 'pt_files', slide_id + '.pt')
+            features = torch.load(feat_path)
+            coords = []
+        
+        return {'features': features, 'coords': coords, 'label': label}
+
+For example, a minimal implementation can just look something like (assume you split your csvs to train / val / test and just use them as individual dataframes).

@@ -6,19 +6,19 @@ exp_arguments:
   # name tag for saving generated figures and assets
   save_exp_code: HEATMAP_OUTPUT 
   # where to save raw asset files
-  raw_save_dir: /home/user/output_node/experiment_cscc_noncscc/experiment_cscc_noncscc/heatmaps/heatmap_raw_results
+  raw_save_dir: /mnt/Users/Catherine/Local_Documents/20240313_EP1_RL2_PS256_SS256_Prelim_results/heatmaps/heatmap_raw_results
   # where to save final heatmaps
-  production_save_dir: /home/user/output_node/experiment_cscc_noncscc/experiment_cscc_noncscc/heatmaps/heatmap_production_results
+  production_save_dir: /mnt/Users/Catherine/Local_Documents/20240313_EP1_RL2_PS256_SS256_Prelim_results/heatmaps/heatmap_production_results
   batch_size: 384
 data_arguments: 
   # where is data stored; can be a single str path or a dictionary of key, data_dir mapping
-  data_dir: /home/user/output_node/experiment_cscc_noncscc/experiment_cscc_noncscc/heatmaps/slides/
+  data_dir: /mnt/Users/Catherine/Local_Documents/20240313_EP1_RL2_PS256_SS256_Prelim_results/heatmaps/slides/
   # column name for key in data_dir (if a dict mapping is used)
   data_dir_key: source
   # csv list containing slide_ids (can additionally have seg/patch paramters, class labels, etc.)
-  process_list: heatmap_cscc_noncscc.csv
+  process_list: /mnt/Users/Catherine/Local_Documents/20240313_EP1_RL2_PS256_SS256_Prelim_results/process_lists/heatmap_cscc_noncscc.csv
   # preset file for segmentation/patching
-  preset: /home/user/lib/CLAM/presets/bwh_biopsy.csv
+  preset: /mnt/Users/Catherine/OneDrive - Erasmus MC/PhD/Histogenomics/20240122_CLAM/presets/bwh_biopsy.csv
   # file extention for slides
   slide_ext: .tif
   # label dictionary for str: interger mapping (optional)
@@ -33,7 +33,7 @@ patching_arguments:
   custom_downsample: 1
 model_arguments: 
   # arguments for initializing model from checkpoint
-  ckpt_path: /home/user/output_node/experiment_cscc_noncscc/experiment_cscc_noncscc/cscc_vs_noncscc_s1/s_5_checkpoint.pt
+  ckpt_path: /mnt/Users/Catherine/Local_Documents/20240313_EP1_RL2_PS256_SS256_Prelim_results/results/cscc_vs_noncscc_s1/s_5_checkpoint.pt
   model_type: clam_sb # see utils/eval_utils/
   initiate_fn: initiate_model # see utils/eval_utils/
   model_size: small

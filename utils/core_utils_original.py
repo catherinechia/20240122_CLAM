@@ -506,7 +506,7 @@ def summary(model, loader, n_classes):
         all_probs[batch_idx] = probs
         all_labels[batch_idx] = label.item()
         
-        patient_results.update({slide_id: {'slide_id': np.array(slide_id), 'prob': probs, 'pred_class': Y_hat.item(),'label': label.item()}})
+        patient_results.update({slide_id: {'slide_id': np.array(slide_id), 'prob': probs,'label': label.item()}})
         error = calculate_error(Y_hat, label)
         test_error += error
 
