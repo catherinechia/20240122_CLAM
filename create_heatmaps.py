@@ -81,7 +81,7 @@ def parse_config_dict(args, config_dict):
     return config_dict
 
 if __name__ == '__main__':
-    config_path = os.path.join('heatmaps/configs', args.config_file)
+    config_path = args.config_file
     config_dict = yaml.safe_load(open(config_path, 'r'))
     config_dict = parse_config_dict(args, config_dict)
 
@@ -93,7 +93,8 @@ if __name__ == '__main__':
         else:
             print ('\n'+key + " : " + str(value))
             
-    decision = input('Continue? Y/N ')
+    #decision = input('Continue? Y/N ')
+    decision = 'Y'
     if decision in ['Y', 'y', 'Yes', 'yes']:
         pass
     elif decision in ['N', 'n', 'No', 'NO']:
@@ -150,7 +151,7 @@ if __name__ == '__main__':
         df = initialize_df(slides, def_seg_params, def_filter_params, def_vis_params, def_patch_params, use_heatmap_args=False)
         
     else:
-        df = pd.read_csv(os.path.join('heatmaps/process_lists', data_args.process_list))
+        df = pd.read_csv(data_args.process_list)
         df = initialize_df(df, def_seg_params, def_filter_params, def_vis_params, def_patch_params, use_heatmap_args=False)
 
     mask = df['process'] == 1
@@ -302,10 +303,14 @@ if __name__ == '__main__':
         features = torch.load(features_path)
         process_stack.loc[i, 'bag_size'] = len(features)
         
+        #Save segmentation mask
         wsi_object.saveSegmentation(mask_file)
+
+        #Inference
         Y_hats, Y_hats_str, Y_probs, A = infer_single_slide(model, features, label, reverse_label_dict, exp_args.n_classes)
         del features
         
+        #Save raw blockmap.h5
         if not os.path.isfile(block_map_save_path): 
             file = h5py.File(h5_path, "r")
             coords = file['coords'][:]
@@ -313,16 +318,16 @@ if __name__ == '__main__':
             asset_dict = {'attention_scores': A, 'coords': coords}
             block_map_save_path = save_hdf5(block_map_save_path, asset_dict, mode='w')
         
-        # save top 3 predictions
+        # Save top 3 predictions
         for c in range(exp_args.n_classes):
             process_stack.loc[i, 'Pred_{}'.format(c)] = Y_hats_str[c]
             process_stack.loc[i, 'p_{}'.format(c)] = Y_probs[c]
 
         os.makedirs('heatmaps/results/', exist_ok=True)
         if data_args.process_list is not None:
-            process_stack.to_csv('heatmaps/results/{}.csv'.format(data_args.process_list.replace('.csv', '')), index=False)
+            process_stack.to_csv('{}.csv'.format(data_args.process_list.replace('.csv', '')), index=False)
         else:
-            process_stack.to_csv('heatmaps/results/{}.csv'.format(exp_args.save_exp_code), index=False)
+            process_stack.to_csv('{}.csv'.format(exp_args.save_exp_code), index=False)
         
         file = h5py.File(block_map_save_path, 'r')
         dset = file['attention_scores']
@@ -331,6 +336,7 @@ if __name__ == '__main__':
         coords = coord_dset[:]
         file.close()
 
+        #This section samples topk patches from the heatmap
         samples = sample_args.samples
         for sample in samples:
             if sample['sample']:
@@ -348,11 +354,12 @@ if __name__ == '__main__':
         wsi_kwargs = {'top_left': top_left, 'bot_right': bot_right, 'patch_size': patch_size, 'step_size': step_size, 
         'custom_downsample':patch_args.custom_downsample, 'level': patch_args.patch_level, 'use_center_shift': heatmap_args.use_center_shift}
 
+        #This section makes raw heatmap (without overlaps)
         heatmap_save_name = '{}_blockmap.tiff'.format(slide_id)
         if os.path.isfile(os.path.join(r_slide_save_dir, heatmap_save_name)):
             pass
         else:
-            heatmap = drawHeatmap(scores, coords, slide_path, wsi_object=wsi_object, cmap=heatmap_args.cmap, alpha=heatmap_args.alpha, use_holes=True, binarize=False, vis_level=-1, blank_canvas=False,
+            heatmap = drawHeatmap(scores, coords, slide_path, wsi_object=wsi_object, cmap=heatmap_args.cmap, alpha=heatmap_args.alpha, use_holes=True, binarize=False, vis_level=heatmap_args.vis_level, blank_canvas=False,
                             thresh=-1, patch_size = vis_patch_size, convert_to_percentiles=True)
         
             heatmap.save(os.path.join(r_slide_save_dir, '{}_blockmap.png'.format(slide_id)))
@@ -404,13 +411,13 @@ if __name__ == '__main__':
             pass
         
         else:                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      
-            heatmap = drawHeatmap(scores, coords, slide_path, wsi_object=wsi_object,  
+            heatmap = drawHeatmap(scores, coords, slide_path, wsi_object=wsi_object,
                                   cmap=heatmap_args.cmap, alpha=heatmap_args.alpha, **heatmap_vis_args, 
                                   binarize=heatmap_args.binarize, 
-                                    blank_canvas=heatmap_args.blank_canvas,
-                                    thresh=heatmap_args.binary_thresh,  patch_size = vis_patch_size,
-                                    overlap=patch_args.overlap, 
-                                    top_left=top_left, bot_right = bot_right)
+                                  blank_canvas=heatmap_args.blank_canvas,
+                                  thresh=heatmap_args.binary_thresh, patch_size = vis_patch_size,
+                                  overlap=patch_args.overlap, 
+                                  top_left=top_left, bot_right = bot_right)
             if heatmap_args.save_ext == 'jpg':
                 heatmap.save(os.path.join(p_slide_save_dir, heatmap_save_name), quality=100)
             else:
@@ -421,7 +428,7 @@ if __name__ == '__main__':
                 vis_level = heatmap_args.vis_level
             else:
                 vis_level = vis_params['vis_level']
-            heatmap_save_name = '{}_orig_{}.{}'.format(slide_id,int(vis_level), heatmap_args.save_ext)
+            heatmap_save_name = '{}_orig_{}.{}'.format(slide_id, int(vis_level), heatmap_args.save_ext)
             if os.path.isfile(os.path.join(p_slide_save_dir, heatmap_save_name)):
                 pass
             else:
