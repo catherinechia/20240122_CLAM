@@ -14,6 +14,7 @@ import matplotlib.pyplot as plt
 from dataset_modules.dataset_generic import Generic_WSI_Classification_Dataset, Generic_MIL_Dataset, save_splits
 import h5py
 from utils.eval_utils import *
+from sklearn.metrics import f1_score #Added to calculate F1-score
 
 # Training settings
 parser = argparse.ArgumentParser(description='CLAM Evaluation Script')
@@ -39,14 +40,16 @@ parser.add_argument('--fold', type=int, default=-1, help='single fold to evaluat
 parser.add_argument('--micro_average', action='store_true', default=False, 
                     help='use micro_average instead of macro_avearge for multiclass AUC')
 parser.add_argument('--split', type=str, choices=['train', 'val', 'test', 'all'], default='test')
-parser.add_argument('--task', type=str, choices=['task_1_tumor_vs_normal',  'task_2_tumor_subtyping'])
+parser.add_argument('--task', type=str, choices=['cscc_vs_noncscc', 'task_1_tumor_vs_normal',  'task_2_tumor_subtyping'])
 parser.add_argument('--drop_out', type=float, default=0.25, help='dropout')
 parser.add_argument('--embed_dim', type=int, default=1024)
+parser.add_argument('--data_label_csv_path', type=str, default=None,
+                    help='data label directory')
 args = parser.parse_args()
 
 device=torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-args.save_dir = os.path.join('./eval_results', 'EVAL_' + str(args.save_exp_code))
+args.save_dir = os.path.join(args.results_dir, 'EVAL_' + str(args.save_exp_code))
 args.models_dir = os.path.join(args.results_dir, str(args.models_exp_code))
 
 os.makedirs(args.save_dir, exist_ok=True)
@@ -72,7 +75,7 @@ f.close()
 print(settings)
 if args.task == 'task_1_tumor_vs_normal':
     args.n_classes=2
-    dataset = Generic_MIL_Dataset(csv_path = 'dataset_csv/tumor_vs_normal_dummy_clean.csv',
+    dataset = Generic_MIL_Dataset(csv_path = args.data_label_csv_path,
                             data_dir= os.path.join(args.data_root_dir, 'tumor_vs_normal_resnet_features'),
                             shuffle = False, 
                             print_info = True,
@@ -82,17 +85,26 @@ if args.task == 'task_1_tumor_vs_normal':
 
 elif args.task == 'task_2_tumor_subtyping':
     args.n_classes=3
-    dataset = Generic_MIL_Dataset(csv_path = 'dataset_csv/tumor_subtyping_dummy_clean.csv',
+    dataset = Generic_MIL_Dataset(csv_path = args.data_label_csv_path,
                             data_dir= os.path.join(args.data_root_dir, 'tumor_subtyping_resnet_features'),
                             shuffle = False, 
                             print_info = True,
                             label_dict = {'subtype_1':0, 'subtype_2':1, 'subtype_3':2},
                             patient_strat= False,
                             ignore=[])
-
+    
+elif args.task == 'cscc_vs_noncscc':
+    args.n_classes=2
+    dataset = Generic_MIL_Dataset(csv_path = args.data_label_csv_path,
+                            data_dir= os.path.join(args.data_root_dir, 'features'),
+                            shuffle = False, 
+                            print_info = True,
+                            label_dict = {'non-cscc':0, 'cscc':1},
+                            patient_strat=False,
+                            ignore=[])
 # elif args.task == 'tcga_kidney_cv':
 #     args.n_classes=3
-#     dataset = Generic_MIL_Dataset(csv_path = 'dataset_csv/tcga_kidney_clean.csv',
+#     dataset = Generic_MIL_Dataset(csv_path = args.data_label_csv_path,
 #                             data_dir= os.path.join(args.data_root_dir, 'tcga_kidney_20x_features'),
 #                             shuffle = False, 
 #                             print_info = True,
@@ -123,6 +135,7 @@ if __name__ == "__main__":
     all_results = []
     all_auc = []
     all_acc = []
+    all_f1 = []
     for ckpt_idx in range(len(ckpt_paths)):
         if datasets_id[args.split] < 0:
             split_dataset = dataset
@@ -130,13 +143,14 @@ if __name__ == "__main__":
             csv_path = '{}/splits_{}.csv'.format(args.splits_dir, folds[ckpt_idx])
             datasets = dataset.return_splits(from_id=False, csv_path=csv_path)
             split_dataset = datasets[datasets_id[args.split]]
-        model, patient_results, test_error, auc, df  = eval(split_dataset, args, ckpt_paths[ckpt_idx])
+        model, patient_results, test_error, auc, df_results_dict  = eval(split_dataset, args, ckpt_paths[ckpt_idx])
         all_results.append(all_results)
         all_auc.append(auc)
         all_acc.append(1-test_error)
-        df.to_csv(os.path.join(args.save_dir, 'fold_{}.csv'.format(folds[ckpt_idx])), index=False)
+        all_f1.append(f1_score(df_results_dict["Y"].tolist(), df_results_dict["Y_hat"].tolist(), zero_division="warn")) #Added to calculate f1
+        df_results_dict.to_csv(os.path.join(args.save_dir, 'fold_{}.csv'.format(folds[ckpt_idx])), index=False)
 
-    final_df = pd.DataFrame({'folds': folds, 'test_auc': all_auc, 'test_acc': all_acc})
+    final_df = pd.DataFrame({'folds': folds, 'test_auc': all_auc, 'test_acc': all_acc, 'test_f1': all_f1})
     if len(folds) != args.k:
         save_name = 'summary_partial_{}_{}.csv'.format(folds[0], folds[-1])
     else:
