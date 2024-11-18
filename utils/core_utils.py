@@ -200,10 +200,10 @@ def train(datasets, cur, args):
     else:
         torch.save(model.state_dict(), os.path.join(args.results_dir, "s_{}_checkpoint.pt".format(cur)))
 
-    _, val_error, val_auc, _= summary(model, val_loader, args.n_classes)
+    results_val_dict, val_error, val_auc, _= summary(model, val_loader, args.n_classes)
     print('Val error: {:.4f}, ROC AUC: {:.4f}'.format(val_error, val_auc))
 
-    results_dict, test_error, test_auc, acc_logger = summary(model, test_loader, args.n_classes)
+    results_test_dict, test_error, test_auc, acc_logger = summary(model, test_loader, args.n_classes)
     print('Test error: {:.4f}, ROC AUC: {:.4f}'.format(test_error, test_auc))
 
     for i in range(args.n_classes):
@@ -219,7 +219,7 @@ def train(datasets, cur, args):
         writer.add_scalar('final/test_error', test_error, 0)
         writer.add_scalar('final/test_auc', test_auc, 0)
         writer.close()
-    return results_dict, test_auc, val_auc, 1-test_error, 1-val_error 
+    return results_val_dict, results_test_dict, test_auc, val_auc, 1-test_error, 1-val_error 
 
 
 def train_loop_clam(epoch, model, loader, optimizer, n_classes, bag_weight, writer = None, loss_fn = None):
@@ -505,7 +505,7 @@ def summary(model, loader, n_classes):
         all_probs[batch_idx] = probs
         all_labels[batch_idx] = label.item()
         
-        patient_results.update({slide_id: {'slide_id': np.array(slide_id), 'prob': probs, 'label': label.item()}})
+        patient_results.update({slide_id: {'slide_id': np.array(slide_id), 'prob': probs, 'pred_class': Y_hat.item(), 'label': label.item()}})
         error = calculate_error(Y_hat, label)
         test_error += error
 
