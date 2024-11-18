@@ -20,6 +20,7 @@ import torch.nn.functional as F
 import pandas as pd
 import numpy as np
 
+from sklearn.metrics import f1_score #Added to calculate F1-score
 
 def main(args):
     # create results directory if necessary
@@ -39,6 +40,8 @@ def main(args):
     all_val_auc = []
     all_test_acc = []
     all_val_acc = []
+    all_val_f1 = [] #Added to calculate F1-score
+    all_test_f1 = [] #Added to calculate F1-score
     folds = np.arange(start, end)
     for i in folds:
         seed_torch(args.seed)
@@ -46,17 +49,32 @@ def main(args):
                 csv_path='{}/splits_{}.csv'.format(args.split_dir, i))
         
         datasets = (train_dataset, val_dataset, test_dataset)
-        results, test_auc, val_auc, test_acc, val_acc  = train(datasets, i, args)
+        results_val_dict, results_test_dict, test_auc, val_auc, test_acc, val_acc  = train(datasets, i, args)
+
+        #Added to calculate F1-score
+        #####################################################
+        #Validation 
+        df_val_class = pd.DataFrame.from_dict(results_val_dict, orient='index')
+        df_val_class = df_val_class[["slide_id", "pred_class", "label"]]
+
+        #Test
+        df_test_class = pd.DataFrame.from_dict(results_test_dict, orient='index')
+        df_test_class = df_test_class[["slide_id", "pred_class", "label"]]
+
+        #####################################################
         all_test_auc.append(test_auc)
         all_val_auc.append(val_auc)
         all_test_acc.append(test_acc)
         all_val_acc.append(val_acc)
+        all_val_f1.append(f1_score(df_val_class["label"].tolist(), df_val_class["pred_class"].tolist(), zero_division="warn"))
+        all_test_f1.append(f1_score(df_test_class["label"].tolist(), df_test_class["pred_class"].tolist(), zero_division="warn"))
+
         #write results to pkl
         filename = os.path.join(args.results_dir, 'split_{}_results.pkl'.format(i))
         save_pkl(filename, results)
 
     final_df = pd.DataFrame({'folds': folds, 'test_auc': all_test_auc, 
-        'val_auc': all_val_auc, 'test_acc': all_test_acc, 'val_acc' : all_val_acc})
+        'val_auc': all_val_auc, 'test_acc': all_test_acc, 'val_acc' : all_val_acc, 'test_f1' : all_test_f1, 'val_f1' : all_val_f1})
 
     if len(folds) != args.k:
         save_name = 'summary_partial_{}_{}.csv'.format(start, end)
@@ -93,12 +111,12 @@ parser.add_argument('--opt', type=str, choices = ['adam', 'sgd'], default='adam'
 parser.add_argument('--drop_out', type=float, default=0.25, help='dropout')
 parser.add_argument('--bag_loss', type=str, choices=['svm', 'ce'], default='ce',
                      help='slide-level classification loss function (default: ce)')
-parser.add_argument('--model_type', type=str, choices=['clam_sb', 'clam_mb', 'mil'], default='clam_sb', 
+parser.add_argument('--model_type', type=str, choices=['clam_sb', 'clam_mb', 'mil', 'addmil'], default='clam_sb', 
                     help='type of model (default: clam_sb, clam w/ single attention branch)')
 parser.add_argument('--exp_code', type=str, help='experiment code for saving results')
 parser.add_argument('--weighted_sample', action='store_true', default=False, help='enable weighted sampling')
 parser.add_argument('--model_size', type=str, choices=['small', 'big'], default='small', help='size of model, does not affect mil')
-parser.add_argument('--task', type=str, choices=['task_1_tumor_vs_normal',  'task_2_tumor_subtyping'])
+parser.add_argument('--task', type=str, choices=['cscc_vs_noncscc', 'task_1_tumor_vs_normal',  'task_2_tumor_subtyping'])
 ### CLAM specific options
 parser.add_argument('--no_inst_cluster', action='store_true', default=False,
                      help='disable instance-level clustering')
@@ -108,7 +126,8 @@ parser.add_argument('--subtyping', action='store_true', default=False,
                      help='subtyping problem')
 parser.add_argument('--bag_weight', type=float, default=0.7,
                     help='clam: weight coefficient for bag-level loss (default: 0.7)')
-parser.add_argument('--B', type=int, default=8, help='numbr of positive/negative patches to sample for clam')
+parser.add_argument('--B', type=int, default=8, help='number of positive/negative patches to sample for clam')
+parser.add_argument('--data_label_csv_path', type=str, default=None, help='data label directory')    
 args = parser.parse_args()
 device=torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
@@ -154,7 +173,7 @@ print('\nLoad Dataset')
 
 if args.task == 'task_1_tumor_vs_normal':
     args.n_classes=2
-    dataset = Generic_MIL_Dataset(csv_path = 'dataset_csv/tumor_vs_normal_dummy_clean.csv',
+    dataset = Generic_MIL_Dataset(csv_path = args.data_label_csv_path,
                             data_dir= os.path.join(args.data_root_dir, 'tumor_vs_normal_resnet_features'),
                             shuffle = False, 
                             seed = args.seed, 
@@ -165,7 +184,7 @@ if args.task == 'task_1_tumor_vs_normal':
 
 elif args.task == 'task_2_tumor_subtyping':
     args.n_classes=3
-    dataset = Generic_MIL_Dataset(csv_path = 'dataset_csv/tumor_subtyping_dummy_clean.csv',
+    dataset = Generic_MIL_Dataset(csv_path = args.data_label_csv_path,
                             data_dir= os.path.join(args.data_root_dir, 'tumor_subtyping_resnet_features'),
                             shuffle = False, 
                             seed = args.seed, 
@@ -174,6 +193,17 @@ elif args.task == 'task_2_tumor_subtyping':
                             patient_strat= False,
                             ignore=[])
 
+elif args.task == 'cscc_vs_noncscc':
+    args.n_classes=2
+    dataset = Generic_MIL_Dataset(csv_path = args.data_label_csv_path,
+                            data_dir= os.path.join(args.data_root_dir, 'features'),
+                            shuffle = False, 
+                            seed = args.seed, 
+                            print_info = True,
+                            label_dict = {'non-cscc':0, 'cscc':1},
+                            patient_strat=False,
+                            ignore=[])
+    
     if args.model_type in ['clam_sb', 'clam_mb']:
         assert args.subtyping 
         
