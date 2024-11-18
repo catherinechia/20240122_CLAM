@@ -22,7 +22,7 @@ from tqdm import tqdm
 
 device=torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-def score2percentile(score, ref):
+def score2percentile(score, ref): #https://github.com/mahmoodlab/CLAM/issues/153
     percentile = percentileofscore(ref, score)
     return percentile
 
