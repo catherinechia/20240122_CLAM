@@ -182,17 +182,6 @@ if args.task == 'task_1_tumor_vs_normal':
                             patient_strat=False,
                             ignore=[])
 
-elif args.task == 'task_2_tumor_subtyping':
-    args.n_classes=3
-    dataset = Generic_MIL_Dataset(csv_path = args.data_label_csv_path,
-                            data_dir= os.path.join(args.data_root_dir, 'tumor_subtyping_resnet_features'),
-                            shuffle = False, 
-                            seed = args.seed, 
-                            print_info = True,
-                            label_dict = {'subtype_1':0, 'subtype_2':1, 'subtype_3':2},
-                            patient_strat= False,
-                            ignore=[])
-
 elif args.task == 'cscc_vs_noncscc':
     args.n_classes=2
     dataset = Generic_MIL_Dataset(csv_path = args.data_label_csv_path,
@@ -203,7 +192,18 @@ elif args.task == 'cscc_vs_noncscc':
                             label_dict = {'non-cscc':0, 'cscc':1},
                             patient_strat=False,
                             ignore=[])
-    
+
+elif args.task == 'task_2_tumor_subtyping':
+    args.n_classes=3
+    dataset = Generic_MIL_Dataset(csv_path = args.data_label_csv_path,
+                            data_dir= os.path.join(args.data_root_dir, 'tumor_subtyping_resnet_features'),
+                            shuffle = False, 
+                            seed = args.seed, 
+                            print_info = True,
+                            label_dict = {'subtype_1':0, 'subtype_2':1, 'subtype_3':2},
+                            patient_strat= False,
+                            ignore=[])
+                            
     if args.model_type in ['clam_sb', 'clam_mb']:
         assert args.subtyping 
         
