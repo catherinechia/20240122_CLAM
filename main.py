@@ -71,7 +71,7 @@ def main(args):
 
         #write results to pkl
         filename = os.path.join(args.results_dir, 'split_{}_results.pkl'.format(i))
-        save_pkl(filename, results)
+        save_pkl(filename, results_test_dict)
 
     final_df = pd.DataFrame({'folds': folds, 'test_auc': all_test_auc, 
         'val_auc': all_val_auc, 'test_acc': all_test_acc, 'val_acc' : all_val_acc, 'test_f1' : all_test_f1, 'val_f1' : all_val_f1})
@@ -203,7 +203,7 @@ elif args.task == 'task_2_tumor_subtyping':
                             label_dict = {'subtype_1':0, 'subtype_2':1, 'subtype_3':2},
                             patient_strat= False,
                             ignore=[])
-                            
+
     if args.model_type in ['clam_sb', 'clam_mb']:
         assert args.subtyping 
         
